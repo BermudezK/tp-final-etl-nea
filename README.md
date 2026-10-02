@@ -1,193 +1,104 @@
-# TP Final — Pipeline ETL de exportaciones del NEA
+# Pipeline ETL de exportaciones del NEA
 
-**Unidad II · Fundamentos de la Programación**
+**TP Final — Unidad II · Fundamentos de la Programación**
 Diplomatura en Data Analytics e IA Aplicada — UNNE / Extender
+Autora: Karina Soledad Bermúdez
 
 ---
 
-## Qué vas a construir
+## Qué hace el pipeline
 
-Un pipeline **ETL** que se conecta a una API pública, transforma los datos
-y produce un dataset analítico listo para usar.
+Descarga de la API de Series de Tiempo pública las exportaciones de las cuatro provincias del NEA (Chaco, Corrientes, Formosa y Misiones) entre 1993 y 2024, las transforma en un dataset analítico y lo valida antes de guardarlo.
 
-```
-   API datos.gob.ar          data/raw/*.json         data/processed/
-   (INDEC, 8 llamadas)  -->  (crudo, sin tocar) -->  exportaciones_nea.csv
-                                                     resumen.json
-        EXTRACT                  TRANSFORM              CHEQUEAR + LOAD
-```
 
-**Los datos:** exportaciones de Chaco, Corrientes, Formosa y Misiones por
-país de destino y por rubro, 1993–2024, en millones de dólares.
-Fuente: INDEC vía la [API de Series de Tiempo](https://apis.datos.gob.ar/series/api/)
-de datos.gob.ar (datasets 357.1 y 350.1).
+**Extract** — pide a la API las series de exportaciones por país de destino
+y por rubro de cada provincia, y guarda las respuestas en `data/raw/`.
 
-**El resultado esperado:** un CSV de **1.408 filas × 13 columnas**.
+**Transform** — convierte los datos del formato ancho de la API (una columna
+por país) a formato largo (una fila por año, provincia y destino), y agrega
+columnas:
 
-Ese CSV no se termina acá: lo vas a volver a usar en el módulo de
-**estadística descriptiva**. Por eso importa que quede bien.
+- región geoeconómica del destino y década;
+- participación del destino en el total exportado por la provincia ese año;
+- variación interanual respecto del año anterior (mismo destino y provincia);
+- ranking de destinos dentro de cada provincia y año, y marca de top 3;
+- rubro principal del año y peso de los productos primarios, mediante un
+  *left join* con las series por rubro.
 
----
+**Load** — antes de guardar corre controles de calidad. Si falla uno
+crítico, el pipeline se detiene y no publica nada:
 
-## Instalación
+| Control | Qué verifica | Si falla |
+|---|---|---|
+| Cantidad | Que haya al menos 1.000 filas | Corta |
+| Columnas | Que todas las filas tengan las 13 columnas del contrato | Corta |
+| Unicidad | Que no se repita la clave (provincia, año, destino) | Corta |
+| Rangos | Que ningún valor sea negativo ni mayor a 10.000 M USD | Corta |
+| Cobertura | Cuántos nulos quedaron en las columnas derivadas | Solo avisa |
 
-Necesitás **Python 3.8 o superior**. Nada más: el proyecto usa solo la
-biblioteca estándar.
+Después genera tres salidas:
 
-En la **terminal de VS Code**, parado en la carpeta del proyecto:
+`data/processed/exportaciones_nea.csv` para el analisis
+`data/processed/resumen.json` para los directivos, con los resumenes relevantes
+`logs/pipeline.log` para hacer auditorias
+
+El CSV y el JSON se sobrescriben en cada corrida (correrlo dos veces da el
+mismo resultado); el log se acumula, porque es un historial que nos permite hacer auditorias.
+
+Desde la carpeta raíz del proyecto:
 
 ```bash
-python --version          # verificá que sea 3.8+
-python src/main.py        # corré el pipeline
+python --version                     # verificar que sea 3.8+
+python src/main.py                   # descarga los datos y corre todo
 ```
 
-La primera corrida descarga los datos de la API (necesitás internet) y los
-deja en `data/raw/`. A partir de ahí podés trabajar sin conexión:
+La primera corrida necesita internet. Después se puede trabajar sin
+conexión, reutilizando lo que ya quedó en `data/raw/`:
 
 ```bash
-python src/main.py --sin-internet    # reutiliza lo que ya bajaste
+python src/main.py --sin-internet
 ```
 
-Correr los tests:
+Para correr los tests de las transformaciones:
 
 ```bash
 python tests/test_transform.py
 ```
 
----
-
-## Estructura del proyecto
+### Estructura
 
 ```
-├── config.py              Configuración: IDs de series, rutas, mapeos.
-│                          El código dice CÓMO; esto dice CON QUÉ.
+├── config.py              IDs de series, rutas, mapeo de regiones y umbrales
 ├── src/
-│   ├── extract.py         [RESUELTO]  Descarga de la API -> data/raw/
-│   ├── transform.py       [TU TRABAJO] TODOs 1 a 8
-│   ├── load.py            [PARCIAL]    TODOs 9 a 12
-│   └── main.py            [RESUELTO]  Orquesta E -> T -> L
+│   ├── extract.py         Descarga de la API -> data/raw/
+│   ├── transform.py       Ancho -> largo, columnas derivadas y join
+│   ├── load.py            Controles de calidad y escritura de las salidas
+│   └── main.py            Orquesta Extract -> Transform -> Load
 ├── tests/
-│   └── test_transform.py  17 tests que definen qué se espera de vos
-│                          (+ 2 en blanco para que escribas vos)
+│   └── test_transform.py  Tests de las funciones del Transform
 ├── data/
-│   ├── raw/               Datos crudos (no se versionan)
-│   └── processed/         Salidas finales (no se versionan)
+│   ├── raw/               Respuestas crudas de la API
+│   └── processed/         CSV y resumen JSON
 └── logs/                  Historial de corridas
 ```
 
 ---
 
-## Lo que tenés que completar
+## De dónde salen los datos
 
-Hay **13 TODOs**. Hacelos **en orden**: cada uno se apoya en el anterior.
-Después de cada uno, corré los tests para ver si vas bien.
+Los datos son del **INDEC** y se obtienen a través de la
+[API de Series de Tiempo](https://apis.datos.gob.ar/series/api/) del portal
+de datos abiertos del Estado argentino (datos.gob.ar):
 
-### `src/transform.py` — el corazón del TP
+- **Dataset 357.1** — Exportaciones por provincia y por país de destino.
+- **Dataset 350.1** — Exportaciones por provincia y por rubro: Productos
+  primarios, MOA (Manufacturas de Origen Agropecuario), MOI (Manufacturas
+  de Origen Industrial) y CyE (Combustibles y Energía).
 
-| TODO | Función | Qué aplica de la cursada |
-|:---:|---|---|
-| 1 | `ancho_a_largo()` | Bucles anidados sobre listas y diccionarios |
-| 2 | `clasificar_region()` | Diccionario de mapeo + `.get()` con default |
-| 3 | `calcular_decada()` | División entera `//` y f-strings |
-| 4 | `calcular_participacion()` | Función con `return` + evitar división por cero |
-| 5 | `calcular_variacion()` | Función con `return` + manejo de `None` |
-| 6 | `agregar_variacion_interanual()` | Diccionario como índice de búsqueda |
-| 7 | `agregar_ranking()` | `sorted()`, `enumerate()`, booleanos |
-| 8 | `construir_indice_rubros()` y `unir_con_rubros()` | JOIN por clave compuesta |
+Unidad: millones de dólares FOB. Frecuencia anual, de 1993 a 2024.
 
-### `src/load.py` — validar y guardar
+Para cada provincia la API publica los principales destinos por separado; el
+resto de los países llega agrupado en una serie llamada **"Resto"**. Por eso
+"Resto" aparece en el CSV como un destino más, pero lo excluí del top de
+destinos del resumen: no es un país y no es comparable con los demás.
 
-| TODO | Función | Qué aplica |
-|:---:|---|---|
-| 9 | `chequear_unicidad()` | Sets para detectar duplicados |
-| 10 | `chequear_rangos()` | Comprensión de listas con filtro |
-| 11 | `construir_resumen()` | Diccionarios anidados, `min`/`max`/`sum` |
-| 12 | `guardar_resumen()` y `escribir_log_corrida()` | `json.dump`, modos `"w"` vs `"a"` |
-
-### `tests/test_transform.py`
-
-| TODO | Qué hacer |
-|:---:|---|
-| 13 | **(Bonus)** Escribí dos tests propios |
-
----
-
-## El dataset que tenés que producir
-
-`data/processed/exportaciones_nea.csv` — **13 columnas, en este orden exacto**:
-
-| # | Columna | Tipo | Descripción |
-|:---:|---|---|---|
-| 1 | `anio` | int | Año de la observación (1993–2024) |
-| 2 | `provincia` | str | Chaco, Corrientes, Formosa o Misiones |
-| 3 | `destino` | str | País de destino (o "Resto") |
-| 4 | `region_destino` | str | Región geoeconómica del destino |
-| 5 | `valor_musd` | float | Exportado a ese destino, en millones de USD |
-| 6 | `total_provincia_musd` | float | Total exportado por la provincia ese año |
-| 7 | `participacion_pct` | float | `valor / total * 100` |
-| 8 | `var_interanual_pct` | float | Variación vs. el año anterior (nulo el 1er año) |
-| 9 | `decada` | str | 1990s, 2000s, 2010s o 2020s |
-| 10 | `ranking_destino` | int | Posición del destino ese año (1 = el mayor) |
-| 11 | `es_top3` | bool | Si está entre los 3 principales |
-| 12 | `rubro_principal` | str | Rubro más exportado ese año (del join) |
-| 13 | `pp_participacion_pct` | float | % de productos primarios ese año (del join) |
-
-Dos filas de ejemplo (valores reales de la API):
-
-```csv
-anio,provincia,destino,region_destino,valor_musd,total_provincia_musd,participacion_pct,var_interanual_pct,decada,ranking_destino,es_top3,rubro_principal,pp_participacion_pct
-2024,Chaco,China,Asia,110.93,401.74,27.61,46.36,2020s,1,True,Productos primarios,81.3
-2024,Chaco,Brasil,Mercosur,18.12,401.74,4.51,30.45,2020s,6,False,Productos primarios,81.3
-```
-
----
-
-## Cómo saber si terminaste
-
-1. `python tests/test_transform.py` → los 17 tests en verde
-   (los 2 del TODO 13 quedan en *skipped* hasta que los escribas).
-2. `python src/main.py` → corre sin errores de punta a punta.
-3. `data/processed/exportaciones_nea.csv` existe y tiene **1.408 filas**
-   (más la de encabezado) y **13 columnas**.
-4. `data/processed/resumen.json` y `logs/pipeline.log` existen.
-5. Corré el pipeline **dos veces**: el CSV tiene que quedar igual
-   (idempotencia) y el log tiene que tener **dos** líneas.
-
-Para contar las filas rápido:
-
-```bash
-wc -l data/processed/exportaciones_nea.csv     # debería dar 1409
-```
-
----
-
-## Consejos
-
-- **Leé los contratos.** Cada función tiene un docstring que dice qué
-  recibe y qué devuelve. El resto del pipeline cuenta con eso.
-- **Un TODO por vez.** Implementá, corré los tests, y recién ahí seguí.
-- **Los errores son información.** Leé el traceback de abajo hacia arriba:
-  la última línea dice qué pasó, las de arriba dónde.
-- **No toques `COLUMNAS`** en `transform.py`: es el contrato de salida.
-- **Commiteá seguido.** Un commit por TODO resuelto es un buen ritmo, y
-  se evalúa. `version_final_v3_DEFINITIVA.py` no es control de versiones.
-- **Si algo del enunciado no se entiende, preguntá** en el foro de la
-  materia antes de asumir.
-
----
-
-## Entrega
-
-1. Creá tu **propio repositorio** en GitHub con este proyecto.
-2. Completá los TODOs, commiteando a medida que avanzás.
-3. Actualizá este README: sacá las secciones de TODOs y contá **vos** qué
-   hace tu pipeline, cómo se corre y qué encontraste en los datos.
-4. Entregá el **link a tu repositorio**.
-
-La guía paso a paso está en `docs/guia-git.md`, dentro de la carpeta
-`tp-final/` del repositorio de la materia.
-
----
-
-*Fuente de datos: INDEC, vía el portal de datos abiertos del Estado
-argentino (datos.gob.ar). IDs de series verificados el 2026-08-02.*
