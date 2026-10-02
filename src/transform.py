@@ -204,13 +204,10 @@ def calcular_participacion(valor, total):
     # TODO 4 --------------------------------------------------------------
     # raise NotImplementedError("TODO 4: implementá calcular_participacion()")
     # ---------------------------------------------------------------------
-    participacion = None
     if total is None or total == 0:
-        return participacion
-    else:
-        participacion = round((valor / total) * 100, 2)
+        return None
 
-    return participacion
+    return round((valor / total) * 100, 2)
 
 
 
@@ -244,12 +241,10 @@ def calcular_variacion(actual, anterior):
     # raise NotImplementedError("TODO 5: implementá calcular_variacion()")
     # ---------------------------------------------------------------------
 
-    variacion = None
     if anterior is None or anterior == 0:
-        return variacion
-    else:
-        variacion = round((actual - anterior) / anterior * 100, 2)
-    return variacion
+        return None
+    
+    return round((actual - anterior) / anterior * 100, 2)
 
 def agregar_variacion_interanual(filas):
     """Agrega var_interanual_pct comparando cada fila con el año previo
