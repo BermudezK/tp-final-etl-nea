@@ -169,8 +169,11 @@ def clasificar_region(destino):
     # TODO 2 --------------------------------------------------------------
     # Una sola línea. Pista: el método .get() de los diccionarios acepta
     # un segundo argumento con el valor por defecto (lo viste en la Clase 3).
-    raise NotImplementedError("TODO 2: implementá clasificar_region()")
+    # raise NotImplementedError("TODO 2: implementá clasificar_region()")
     # ---------------------------------------------------------------------
+    region = config.REGIONES.get(destino, config.REGION_POR_DEFECTO)
+
+    return region
 
 
 def calcular_decada(anio):
