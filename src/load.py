@@ -183,8 +183,49 @@ def construir_resumen(filas, detalle_checks):
     #   - Para provincias únicas y ordenadas: sorted({f["provincia"] for f in filas})
     #   - Para la fecha: datetime.now().strftime("%Y-%m-%d %H:%M")
     #   - Podés agregar más claves si querés (suma puntos en la rúbrica).
-    raise NotImplementedError("TODO 11: implementá construir_resumen()")
     # ---------------------------------------------------------------------
+
+    # Totales acumulados del período. Se suma valor_musd (no
+    # total_provincia_musd, que se repite en cada destino del mismo año).
+    total_por_provincia = {}
+    total_por_destino = {}
+    for f in filas:
+        total_por_provincia[f["provincia"]] = total_por_provincia.get(f["provincia"], 0) + f["valor_musd"]
+        total_por_destino[f["destino"]] = total_por_destino.get(f["destino"], 0) + f["valor_musd"]
+
+    # "Resto" agrupa a todos los países sin serie propia: no es un destino
+    # comparable, así que queda fuera del top (pero sí suma en los totales).
+    total_por_destino.pop("Resto", None)
+    destinos_ordenados = sorted(total_por_destino.items(), key=lambda par: par[1], reverse=True)
+    top_destinos = [
+        {"destino": destino, "total_musd": round(total, 2)}
+        for destino, total in destinos_ordenados[:config.TOP_DESTINOS_RESUMEN]
+    ]
+
+    return {
+        "dataset": "Exportaciones argentinas por provincia y destino",
+        "fuente": "INDEC vía la API de Series de Tiempo https://apis.datos.gob.ar/series/api/ de datos.gob.ar (datasets 357.1 y 350.1)",
+        "unidad": "millones de dólares FOB",
+        "generado": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "filas": len(filas),
+        "columnas": len(COLUMNAS),
+        "periodo": {
+            "desde": min(f["anio"] for f in filas),
+            "hasta": max(f["anio"] for f in filas)
+        },
+        "provincias": sorted({f["provincia"] for f in filas}),
+        "valor_musd": {
+            "minimo": min(f["valor_musd"] for f in filas if f["valor_musd"] is not None),
+            "maximo": max(f["valor_musd"] for f in filas if f["valor_musd"] is not None),
+            "promedio": round(sum(f["valor_musd"] for f in filas if f["valor_musd"] is not None) / len([f for f in filas if f["valor_musd"] is not None]), 2)
+        },
+        "total_por_provincia": {
+            provincia: round(total, 2)
+            for provincia, total in sorted(total_por_provincia.items())
+        },
+        "top_destinos": top_destinos,
+        "quality_checks": detalle_checks
+    }   
 
 
 def guardar_resumen(resumen, carpeta=None, nombre=None):
