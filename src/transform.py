@@ -345,9 +345,29 @@ def construir_indice_rubros(paquetes_rubro):
     #   - Para el rubro con mayor valor:  max(dic, key=dic.get)
     #   - El total del año es la suma de los 4 rubros: sum(dic.values())
     #   - Descartá los valores None antes de sumar.
-    raise NotImplementedError("TODO 8a: implementá construir_indice_rubros()")
+    # raise NotImplementedError("TODO 8a: implementá construir_indice_rubros()")
     # ---------------------------------------------------------------------
 
+    for paquete in paquetes_rubro:
+        provincia = paquete["provincia"]
+        columnas = paquete["orden_columnas"]
+
+        for fila_cruda in paquete["data"]:
+            anio = extraer_anio(fila_cruda[0])
+            valores = fila_cruda[1:]
+
+            # Crear un diccionario de rubros y sus valores, descartando None
+            rubros_valores = {columna: valor for columna, valor in zip(columnas, valores) if valor is not None}
+
+            if rubros_valores:
+                rubro_principal = max(rubros_valores, key=rubros_valores.get)
+                total = sum(rubros_valores.values())
+                pp_participacion_pct = calcular_participacion(rubros_valores.get("Productos primarios", 0), total)
+
+                indice[(provincia, anio)] = {
+                    "rubro_principal": rubro_principal,
+                    "pp_participacion_pct": pp_participacion_pct
+                }
     logging.info("  índice de rubros: %s claves (provincia, año)", len(indice))
     return indice
 
@@ -363,9 +383,15 @@ def unir_con_rubros(filas, indice_rubros):
     # TODO 8b -------------------------------------------------------------
     # Para cada fila, buscá indice_rubros.get((provincia, anio)) y asigná
     # 'rubro_principal' y 'pp_participacion_pct'. Si no hay match, None.
-    raise NotImplementedError("TODO 8b: implementá unir_con_rubros()")
+    # raise NotImplementedError("TODO 8b: implementá unir_con_rubros()")
     # ---------------------------------------------------------------------
 
+    for fila in filas:
+        clave = (fila["provincia"], fila["anio"])
+        rubro_info = indice_rubros.get(clave, {"rubro_principal": None, "pp_participacion_pct": None})
+        fila["rubro_principal"] = rubro_info["rubro_principal"]
+        fila["pp_participacion_pct"] = rubro_info["pp_participacion_pct"]
+    return filas
 
 # ======================================================================
 # ORQUESTACIÓN DEL TRANSFORM  (ya resuelta: no hace falta tocarla)
