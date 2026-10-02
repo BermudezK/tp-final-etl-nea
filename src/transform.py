@@ -169,7 +169,6 @@ def clasificar_region(destino):
     # TODO 2 --------------------------------------------------------------
     # Una sola línea. Pista: el método .get() de los diccionarios acepta
     # un segundo argumento con el valor por defecto (lo viste en la Clase 3).
-    # raise NotImplementedError("TODO 2: implementá clasificar_region()")
     # ---------------------------------------------------------------------
     region = config.REGIONES.get(destino, config.REGION_POR_DEFECTO)
 
@@ -185,7 +184,6 @@ def calcular_decada(anio):
     # Pista: la división entera // te da el inicio de la década.
     #        ¿Cuánto vale (1993 // 10) * 10 ?
     #        Después armá el texto con una f-string.
-    # raise NotImplementedError("TODO 3: implementá calcular_decada()")
     # ---------------------------------------------------------------------
     decada = (anio // 10)*10
 
@@ -202,7 +200,6 @@ def calcular_participacion(valor, total):
     Redondeá a 2 decimales.
     """
     # TODO 4 --------------------------------------------------------------
-    # raise NotImplementedError("TODO 4: implementá calcular_participacion()")
     # ---------------------------------------------------------------------
     if total is None or total == 0:
         return None
@@ -238,7 +235,6 @@ def calcular_variacion(actual, anterior):
     Devolvé None si 'anterior' es None o cero. Redondeá a 2 decimales.
     """
     # TODO 5 --------------------------------------------------------------
-    # raise NotImplementedError("TODO 5: implementá calcular_variacion()")
     # ---------------------------------------------------------------------
 
     if anterior is None or anterior == 0:
@@ -264,7 +260,6 @@ def agregar_variacion_interanual(filas):
     #      y calcular_variacion() ya sabe qué hacer con eso.
     #
     # Usar un dict como índice evita recorrer toda la lista por cada fila.
-    # raise NotImplementedError("TODO 6: implementá agregar_variacion_interanual()")
     # ---------------------------------------------------------------------
     indice = {}
     for fila in filas:
@@ -300,7 +295,6 @@ def agregar_ranking(filas, top_n=None):
     #      sorted(grupo, key=lambda f: f["valor_musd"], reverse=True)
     #   3. Recorré el grupo ordenado con enumerate(..., start=1) y asigná
     #      'ranking_destino' y 'es_top3' (un booleano: posición <= top_n).
-    # raise NotImplementedError("TODO 7: implementá agregar_ranking()")
     # ---------------------------------------------------------------------
 
     grupos = {}
@@ -345,7 +339,6 @@ def construir_indice_rubros(paquetes_rubro):
     #   - Para el rubro con mayor valor:  max(dic, key=dic.get)
     #   - El total del año es la suma de los 4 rubros: sum(dic.values())
     #   - Descartá los valores None antes de sumar.
-    # raise NotImplementedError("TODO 8a: implementá construir_indice_rubros()")
     # ---------------------------------------------------------------------
 
     for paquete in paquetes_rubro:
@@ -383,7 +376,6 @@ def unir_con_rubros(filas, indice_rubros):
     # TODO 8b -------------------------------------------------------------
     # Para cada fila, buscá indice_rubros.get((provincia, anio)) y asigná
     # 'rubro_principal' y 'pp_participacion_pct'. Si no hay match, None.
-    # raise NotImplementedError("TODO 8b: implementá unir_con_rubros()")
     # ---------------------------------------------------------------------
 
     for fila in filas:
